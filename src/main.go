@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"furniture-crawler-queue-manager/database"
+	"furniture-crawler-queue-manager/secrets"
 	"furniture-crawler-queue-manager/sqs"
 	"log"
 	"os"
@@ -14,6 +15,12 @@ const defaultFetchAmount = 10
 
 func main() {
 	ctx := context.Background()
+
+	err := secrets.GetDatabaseCredentials(ctx)
+	if err != nil {
+		log.Fatalf("failed to get database credentials: %v", err)
+	}
+
 	conn, err := database.Connect(ctx)
 	if err != nil {
 		panic(err)

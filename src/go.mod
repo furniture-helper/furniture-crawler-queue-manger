@@ -7,6 +7,7 @@ toolchain go1.24.7
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.7
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.41.1
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.42.21
 	github.com/jackc/pgx/v5 v5.8.0
 )
