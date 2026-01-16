@@ -9,13 +9,18 @@ import (
 	"log"
 	"os"
 	"strconv"
+
+	"github.com/aws/aws-lambda-go/lambda"
 )
+
+type Response struct {
+	Message string `json:"message"`
+	Status  int    `json:"status"`
+}
 
 const defaultFetchAmount = 10
 
-func main() {
-	ctx := context.Background()
-
+func HandleRequest(ctx context.Context) (Response, error) {
 	err := secrets.GetDatabaseCredentials(ctx)
 	if err != nil {
 		log.Fatalf("failed to get database credentials: %v", err)
@@ -76,5 +81,20 @@ func main() {
 
 	if err := rows.Err(); err != nil {
 		log.Fatal("rows error:", err)
+	}
+
+	return Response{
+		Message: "Success",
+		Status:  200,
+	}, nil
+}
+
+func main() {
+	// If running locally (no Lambda env var), call handler directly
+	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") == "" {
+		resp, err := HandleRequest(context.Background())
+		fmt.Printf("Response: %+v, Error: %v\n", resp, err)
+	} else {
+		lambda.Start(HandleRequest)
 	}
 }
