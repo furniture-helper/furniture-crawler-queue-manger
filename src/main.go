@@ -21,7 +21,32 @@ type Response struct {
 const defaultFetchAmount = 10
 
 func HandleRequest(ctx context.Context) (Response, error) {
-	err := secrets.GetDatabaseCredentials(ctx)
+	queueUrl := os.Getenv("SQS_QUEUE_URL")
+	if queueUrl == "" {
+		log.Fatal("SQS_QUEUE_URL environment variable is not set")
+	}
+
+	fmt.Printf("Using SQS Queue URL: %s\n", queueUrl)
+
+	sqsClient, err := sqs.New(ctx, queueUrl)
+	if err != nil {
+		log.Fatal("Failed to create SQS client:", err)
+	}
+
+	isQueueBelowThreshold, err := sqsClient.IsQueueBelowThreshold(ctx)
+	if err != nil {
+		log.Fatal("Failed to check if SQS queue is empty:", err)
+	}
+
+	if !isQueueBelowThreshold {
+		fmt.Println("SQS queue is above threshold. Exiting without adding new messages.")
+		return Response{
+			Message: "Queue not empty, no messages added",
+			Status:  200,
+		}, nil
+	}
+
+	err = secrets.GetDatabaseCredentials(ctx)
 	if err != nil {
 		log.Fatalf("failed to get database credentials: %v", err)
 	}
@@ -55,18 +80,6 @@ func HandleRequest(ctx context.Context) (Response, error) {
 		log.Fatal("Query failed:", err)
 	}
 	defer rows.Close()
-
-	queueUrl := os.Getenv("SQS_QUEUE_URL")
-	if queueUrl == "" {
-		log.Fatal("SQS_QUEUE_URL environment variable is not set")
-	}
-
-	fmt.Printf("Using SQS Queue URL: %s\n", queueUrl)
-
-	sqsClient, err := sqs.New(ctx, queueUrl)
-	if err != nil {
-		log.Fatal("Failed to create SQS client:", err)
-	}
 
 	count := 0
 	for rows.Next() {

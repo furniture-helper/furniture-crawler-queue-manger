@@ -4,12 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"os"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 )
+
+const defaultThreshold = 0
 
 type Client struct {
 	svc      *sqs.Client
@@ -51,4 +56,37 @@ func (c *Client) SendMessage(ctx context.Context, body string, attrs map[string]
 		return "", errors.New("no message id returned")
 	}
 	return *out.MessageId, nil
+}
+
+func (c *Client) IsQueueBelowThreshold(ctx context.Context) (bool, error) {
+	thresholdStr := os.Getenv("SQS_QUEUE_THRESHOLD")
+	threshold := defaultThreshold
+	if thresholdStr != "" {
+		n, err := strconv.Atoi(thresholdStr)
+		if err != nil || n <= 0 {
+			log.Fatalf("invalid SQS_QUEUE_THRESHOLD: %q", thresholdStr)
+		}
+		threshold = n
+	}
+
+	out, err := c.svc.GetQueueAttributes(ctx, &sqs.GetQueueAttributesInput{
+		QueueUrl:       aws.String(c.queueURL),
+		AttributeNames: []types.QueueAttributeName{types.QueueAttributeNameApproximateNumberOfMessages},
+	})
+	if err != nil {
+		return false, err
+	}
+	numMessagesStr, ok := out.Attributes[string(types.QueueAttributeNameApproximateNumberOfMessages)]
+	if !ok {
+		return false, errors.New("attribute ApproximateNumberOfMessages not found")
+	}
+	var numMessages int
+	_, err = fmt.Sscanf(numMessagesStr, "%d", &numMessages)
+	if err != nil {
+		return false, fmt.Errorf("parsing number of messages: %w", err)
+	}
+
+	fmt.Printf("Number of messages in queue: %d\n", numMessages)
+
+	return numMessages <= threshold, nil
 }
