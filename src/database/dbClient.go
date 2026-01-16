@@ -14,7 +14,7 @@ const defaultHost = "localhost"
 const defaultDatabase = "furniture_crawler"
 const defaultUser = "furniture_crawler"
 const defaultPassword = "Test@123"
-const defaultSSLMode = "true"
+const defaultSSLMode = "require"
 
 func Connect(ctx context.Context) (*pgxpool.Pool, error) {
 	dbHost := os.Getenv("PG_HOST")
