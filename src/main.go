@@ -30,7 +30,7 @@ func main() {
 		amount = n
 	}
 
-	rows, err := conn.Query(ctx, fmt.Sprintf("SELECT url, domain from pages ORDER BY updated_at DESC LIMIT %d", amount))
+	rows, err := conn.Query(ctx, fmt.Sprintf("SELECT url, domain from pages WHERE is_active = 'true' ORDER BY updated_at DESC LIMIT %d", amount))
 	if err != nil {
 		log.Fatal("Query failed:", err)
 	}
@@ -48,6 +48,7 @@ func main() {
 		log.Fatal("Failed to create SQS client:", err)
 	}
 
+	count := 0
 	for rows.Next() {
 		var url string
 		var domain string
@@ -61,7 +62,11 @@ func main() {
 			log.Fatal("Failed to send message to SQS:", err)
 		}
 		fmt.Printf("Sent message to SQS with Message ID: %s\n", messageId)
+		count++
 	}
+
+	fmt.Printf("Total messages sent to SQS: %d\n", count)
+
 	if err := rows.Err(); err != nil {
 		log.Fatal("rows error:", err)
 	}
