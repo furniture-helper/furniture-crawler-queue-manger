@@ -68,13 +68,15 @@ func HandleRequest(ctx context.Context) (Response, error) {
 	}
 
 	rows, err := conn.Query(ctx, `
-		SELECT url, domain
-		FROM pages
-		WHERE is_active = $1
-		  AND updated_at < NOW() - INTERVAL '24 hours'
-		ORDER BY updated_at DESC
-		LIMIT $2
-	`, true, amount)
+		SELECT * FROM (
+			SELECT url, domain
+			FROM pages
+			WHERE is_active = $1
+			  AND updated_at < NOW() - INTERVAL '24 hours'
+			ORDER BY updated_at DESC
+			LIMIT $2
+		) sub
+		ORDER BY RANDOM()`, true, amount)
 
 	if err != nil {
 		log.Fatal("Query failed:", err)
