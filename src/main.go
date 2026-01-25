@@ -69,7 +69,7 @@ func HandleRequest(ctx context.Context) (Response, error) {
 
 	fmt.Printf("Deleting inactive pages older than %d days\n", deletionInterval)
 	_, err = conn.Exec(ctx, `
-		DELETE FROM pages WHERE updated_at < NOW() - $1 * INTERVAL '1 day'	
+		DELETE FROM pages WHERE updated_at < NOW() - $1 * INTERVAL '1 day' AND s3_key != 'NOT_CRAWLED'	
 	`, deletionInterval)
 
 	if err != nil {
