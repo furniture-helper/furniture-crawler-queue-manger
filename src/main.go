@@ -46,6 +46,12 @@ func HandleRequest(ctx context.Context) (Response, error) {
 		}, nil
 	}
 
+	err = sqsClient.PurgeQueue(ctx)
+	if err != nil {
+		log.Fatal("Failed to purge SQS queue:", err)
+	}
+	fmt.Println("SQS queue purged successfully")
+
 	err = secrets.GetDatabaseCredentials(ctx)
 	if err != nil {
 		log.Fatalf("failed to get database credentials: %v", err)
@@ -109,14 +115,15 @@ func HandleRequest(ctx context.Context) (Response, error) {
 		if err := rows.Scan(&url, &domain); err != nil {
 			log.Fatal("Scan failed:", err)
 		}
-		fmt.Printf("URL: %s, Domain: %s\n", url, domain)
 
 		messageId, err := sqsClient.SendMessage(ctx, url, map[string]string{"domain": domain})
 		if err != nil {
 			log.Fatal("Failed to send message to SQS:", err)
 		}
 		fmt.Printf("Sent message to SQS with Message ID: %s\n", messageId)
+
 		count++
+		fmt.Printf("URL: %s, Domain: %s Count: %d\n", url, domain, count)
 	}
 
 	fmt.Printf("Total messages sent to SQS: %d\n", count)

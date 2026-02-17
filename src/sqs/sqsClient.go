@@ -90,3 +90,10 @@ func (c *Client) IsQueueBelowThreshold(ctx context.Context) (bool, error) {
 
 	return numMessages <= threshold, nil
 }
+
+func (c *Client) PurgeQueue(ctx context.Context) error {
+	_, err := c.svc.PurgeQueue(ctx, &sqs.PurgeQueueInput{
+		QueueUrl: aws.String(c.queueURL),
+	})
+	return err
+}
