@@ -98,7 +98,7 @@ func HandleRequest(ctx context.Context) (Response, error) {
 			FROM pages
 			WHERE is_active = $1
 			  AND updated_at < NOW() - INTERVAL '24 hours'
-			ORDER BY updated_at DESC
+			ORDER BY updated_at
 			LIMIT $2
 		) sub
 		ORDER BY RANDOM()`, true, amount)
