@@ -46,16 +46,16 @@ func HandleRequest(ctx context.Context) (Response, error) {
 		}, nil
 	}
 
-	err = sqsClient.PurgeQueue(ctx)
-	if err != nil {
-		log.Fatal("Failed to purge SQS queue:", err)
-	}
-	fmt.Println("SQS queue purged successfully")
-
-	err = secrets.GetDatabaseCredentials(ctx)
-	if err != nil {
-		log.Fatalf("failed to get database credentials: %v", err)
-	}
+	//err = sqsClient.PurgeQueue(ctx)
+	//if err != nil {
+	//	log.Fatal("Failed to purge SQS queue:", err)
+	//}
+	//fmt.Println("SQS queue purged successfully")
+	//
+	//err = secrets.GetDatabaseCredentials(ctx)
+	//if err != nil {
+	//	log.Fatalf("failed to get database credentials: %v", err)
+	//}
 
 	conn, err := database.Connect(ctx)
 	if err != nil {
