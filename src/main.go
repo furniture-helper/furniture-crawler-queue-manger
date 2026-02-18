@@ -63,33 +63,33 @@ func HandleRequest(ctx context.Context) (Response, error) {
 	}
 	defer conn.Close()
 
-	deletionIntervalStr := os.Getenv("DELETION_INTERVAL_DAYS")
-	deletionInterval := 3
-	if deletionIntervalStr != "" {
-		n, err := strconv.Atoi(deletionIntervalStr)
-		if err != nil || n <= 0 {
-			log.Fatalf("invalid DELETION_INTERVAL_DAYS: %q", deletionIntervalStr)
-		}
-		deletionInterval = n
-	}
+	//deletionIntervalStr := os.Getenv("DELETION_INTERVAL_DAYS")
+	//deletionInterval := 3
+	//if deletionIntervalStr != "" {
+	//	n, err := strconv.Atoi(deletionIntervalStr)
+	//	if err != nil || n <= 0 {
+	//		log.Fatalf("invalid DELETION_INTERVAL_DAYS: %q", deletionIntervalStr)
+	//	}
+	//	deletionInterval = n
+	//}
 
-	fmt.Printf("Deleting inactive pages older than %d days\n", deletionInterval)
-	_, err = conn.Exec(ctx, `
-		DELETE FROM pages WHERE updated_at < NOW() - $1 * INTERVAL '1 day' AND s3_key != 'NOT_CRAWLED'	
-	`, deletionInterval)
+	//fmt.Printf("Deleting inactive pages older than %d days\n", deletionInterval)
+	//_, err = conn.Exec(ctx, `
+	//	DELETE FROM pages WHERE updated_at < NOW() - $1 * INTERVAL '1 day' AND s3_key != 'NOT_CRAWLED'
+	//`, deletionInterval)
+	//
+	//if err != nil {
+	//	log.Fatal("Query failed:", err)
+	//}
 
-	if err != nil {
-		log.Fatal("Query failed:", err)
-	}
-
-	fmt.Printf("Deleting old pages that have not been crawled in %d days\n", deletionInterval)
-	_, err = conn.Exec(ctx, `
-		DELETE FROM pages WHERE created_at < NOW() - $1 * INTERVAL '1 day' AND s3_key = 'NOT_CRAWLED'
-	`, deletionInterval)
-
-	if err != nil {
-		log.Fatal("Query failed:", err)
-	}
+	//fmt.Printf("Deleting old pages that have not been crawled in %d days\n", deletionInterval)
+	//_, err = conn.Exec(ctx, `
+	//	DELETE FROM pages WHERE created_at < NOW() - $1 * INTERVAL '1 day' AND s3_key = 'NOT_CRAWLED'
+	//`, deletionInterval)
+	//
+	//if err != nil {
+	//	log.Fatal("Query failed:", err)
+	//}
 
 	amountStr := os.Getenv("FETCH_AMOUNT")
 	amount := defaultFetchAmount
