@@ -105,8 +105,11 @@ func HandleRequest(ctx context.Context) (Response, error) {
 	rows, err := conn.Query(ctx, `
 		SELECT url, domain
 		FROM pages
-		WHERE is_active = $1
-		  AND updated_at < NOW() - INTERVAL '24 hours'
+		WHERE 
+		    is_active = $1
+  			AND 
+		    	(updated_at < NOW() - INTERVAL '24 hours') OR 
+		    	(s3_key = 'NOT_CRAWLED')
 		ORDER BY RANDOM()
 		LIMIT $2`, true, amount)
 
