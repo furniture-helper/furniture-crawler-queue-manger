@@ -107,7 +107,7 @@ func HandleRequest(ctx context.Context) (Response, error) {
 		FROM pages
 		WHERE is_active = $1
 		  AND updated_at < NOW() - INTERVAL '24 hours'
-		ORDER BY updated_at ASC
+		ORDER BY RANDOM()
 		LIMIT $2`, true, amount)
 
 	if err != nil {
