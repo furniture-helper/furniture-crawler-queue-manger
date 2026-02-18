@@ -82,6 +82,15 @@ func HandleRequest(ctx context.Context) (Response, error) {
 		log.Fatal("Query failed:", err)
 	}
 
+	fmt.Printf("Deleting old pages that have not been crawled in %d days\n", deletionInterval)
+	_, err = conn.Exec(ctx, `
+		DELETE FROM pages WHERE created_at < NOW() - $1 * INTERVAL '1 day' AND s3_key = 'NOT_CRAWLED'
+	`, deletionInterval)
+
+	if err != nil {
+		log.Fatal("Query failed:", err)
+	}
+
 	amountStr := os.Getenv("FETCH_AMOUNT")
 	amount := defaultFetchAmount
 	if amountStr != "" {
