@@ -108,7 +108,7 @@ func HandleRequest(ctx context.Context) (Response, error) {
 		WHERE 
 		    is_active = $1
   			AND 
-		    	(updated_at < NOW() - INTERVAL '24 hours') OR 
+		    	(last_crawled_at < NOW() - INTERVAL '24 hours') OR 
 		    	(s3_key = 'NOT_CRAWLED')
 		ORDER BY RANDOM()
 		LIMIT $2`, true, amount)
