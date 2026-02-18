@@ -52,10 +52,11 @@ func HandleRequest(ctx context.Context) (Response, error) {
 	//}
 	//fmt.Println("SQS queue purged successfully")
 	//
-	//err = secrets.GetDatabaseCredentials(ctx)
-	//if err != nil {
-	//	log.Fatalf("failed to get database credentials: %v", err)
-	//}
+
+	err = secrets.GetDatabaseCredentials(ctx)
+	if err != nil {
+		log.Fatalf("failed to get database credentials: %v", err)
+	}
 
 	conn, err := database.Connect(ctx)
 	if err != nil {
