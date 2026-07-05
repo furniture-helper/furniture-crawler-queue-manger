@@ -104,14 +104,35 @@ func HandleRequest(ctx context.Context) (Response, error) {
 
 	rows, err := conn.Query(ctx, `
 		SELECT url, domain
-		FROM pages
-		WHERE 
-		    is_active = $1
-  			AND 
-		    	(last_crawled_at < NOW() - INTERVAL '60 hours') OR 
-		    	(s3_key = 'NOT_CRAWLED')
+		FROM (
+			 SELECT DISTINCT ON (url) url, domain
+			 FROM (
+					  SELECT pages.url AS url, pages.domain AS domain
+					  FROM page_classifications
+					  INNER JOIN pages ON page_classifications.url = pages.url
+					  WHERE
+						  pages.is_active = $1
+						AND pages.s3_key != 'REDIRECT'
+						AND page_classifications.type = 'product'
+						AND pages.last_crawled_at < NOW() - INTERVAL '60 hours'
+	
+					  UNION ALL
+	
+					  SELECT pages.url AS url, pages.domain AS domain
+					  FROM pages
+					  WHERE (
+						pages.is_active = $1
+						AND pages.s3_key != 'REDIRECT'
+						AND pages.last_crawled_at < NOW() - INTERVAL '168 hours'
+						) OR (
+							pages.is_active = TRUE AND
+							pages.s3_key = 'NOT_CRAWLED'
+						  )
+				  ) combined
+			 ORDER BY url
+		 ) deduped
 		ORDER BY RANDOM()
-		LIMIT $2`, true, amount)
+		LIMIT $2;`, true, amount)
 
 	if err != nil {
 		log.Fatal("Query failed:", err)
