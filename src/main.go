@@ -112,6 +112,7 @@ func HandleRequest(ctx context.Context) (Response, error) {
 					  INNER JOIN pages ON page_classifications.url = pages.url
 					  WHERE
 						  pages.is_active = $1
+					    AND pages.domain != 'lifemobile.lk'
 						AND pages.s3_key != 'REDIRECT'
 						AND page_classifications.type = 'product'
 						AND pages.last_crawled_at < NOW() - INTERVAL '60 hours'
@@ -122,6 +123,7 @@ func HandleRequest(ctx context.Context) (Response, error) {
 					  FROM pages
 					  WHERE (
 						pages.is_active = $1
+						AND pages.domain != 'lifemobile.lk'
 						AND pages.s3_key != 'REDIRECT'
 						AND pages.last_crawled_at < NOW() - INTERVAL '168 hours'
 						) OR (
