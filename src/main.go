@@ -113,6 +113,7 @@ func HandleRequest(ctx context.Context) (Response, error) {
 					  WHERE
 						  pages.is_active = $1
 						AND pages.s3_key != 'REDIRECT'
+						AND pages.domain != 'lifemobile.lk'
 						AND page_classifications.type = 'product'
 						AND pages.last_crawled_at < NOW() - INTERVAL '60 hours'
 	
@@ -123,6 +124,7 @@ func HandleRequest(ctx context.Context) (Response, error) {
 					  WHERE (
 						pages.is_active = $1
 						AND pages.s3_key != 'REDIRECT'
+						AND pages.domain != 'lifemobile.lk'
 						AND pages.last_crawled_at < NOW() - INTERVAL '168 hours'
 						) OR (
 							pages.is_active = TRUE AND
