@@ -115,7 +115,7 @@ func HandleRequest(ctx context.Context) (Response, error) {
 						AND pages.s3_key != 'REDIRECT'
 						AND pages.domain != 'lifemobile.lk'
 						AND page_classifications.type = 'product'
-						AND pages.last_crawled_at < NOW() - INTERVAL '60 hours'
+						AND pages.last_crawled_at < NOW() - INTERVAL '156 hours'
 	
 					  UNION ALL
 	
@@ -125,7 +125,7 @@ func HandleRequest(ctx context.Context) (Response, error) {
 						pages.is_active = $1
 						AND pages.s3_key != 'REDIRECT'
 						AND pages.domain != 'lifemobile.lk'
-						AND pages.last_crawled_at < NOW() - INTERVAL '168 hours'
+						AND pages.last_crawled_at < NOW() - INTERVAL '324 hours'
 						) OR (
 							pages.is_active = TRUE AND
 							pages.s3_key = 'NOT_CRAWLED'
