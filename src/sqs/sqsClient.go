@@ -35,19 +35,10 @@ func New(ctx context.Context, queueURL string) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) SendMessage(ctx context.Context, body string, attrs map[string]string) (string, error) {
-	msgAttrs := map[string]types.MessageAttributeValue{}
-	for k, v := range attrs {
-		msgAttrs[k] = types.MessageAttributeValue{
-			DataType:    aws.String("String"),
-			StringValue: aws.String(v),
-		}
-	}
-
+func (c *Client) SendMessage(ctx context.Context, body string) (string, error) {
 	out, err := c.svc.SendMessage(ctx, &sqs.SendMessageInput{
-		QueueUrl:          aws.String(c.queueURL),
-		MessageBody:       aws.String(body),
-		MessageAttributes: msgAttrs,
+		QueueUrl:    aws.String(c.queueURL),
+		MessageBody: aws.String(body),
 	})
 	if err != nil {
 		return "", err

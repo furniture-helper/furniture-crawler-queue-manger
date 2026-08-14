@@ -6,11 +6,14 @@ import (
 	"furniture-crawler-queue-manager/database"
 	"furniture-crawler-queue-manager/secrets"
 	"furniture-crawler-queue-manager/sqs"
+	"hash/fnv"
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Response struct {
@@ -102,73 +105,125 @@ func HandleRequest(ctx context.Context) (Response, error) {
 		amount = n
 	}
 
-	rows, err := conn.Query(ctx, `
-		SELECT url, domain
-		FROM (
-			 SELECT DISTINCT ON (url) url, domain
-			 FROM (
-					  SELECT pages.url AS url, pages.domain AS domain
-					  FROM page_classifications
-					  INNER JOIN pages ON page_classifications.url = pages.url
-					  WHERE
-						  pages.is_active = $1
-						AND pages.s3_key != 'REDIRECT'
-						AND pages.domain != 'lifemobile.lk'
-						AND page_classifications.type = 'product'
-						AND pages.last_crawled_at < NOW() - INTERVAL '156 hours'
-	
-					  UNION ALL
-	
-					  SELECT pages.url AS url, pages.domain AS domain
-					  FROM pages
-					  WHERE (
-						pages.is_active = $1
-						AND pages.s3_key != 'REDIRECT'
-						AND pages.domain != 'lifemobile.lk'
-						AND pages.last_crawled_at < NOW() - INTERVAL '324 hours'
-						) OR (
-							pages.is_active = TRUE AND
-							pages.s3_key = 'NOT_CRAWLED'
-						  )
-				  ) combined
-			 ORDER BY url
-		 ) deduped
-		ORDER BY RANDOM()
-		LIMIT $2;`, true, amount)
-
+	uncrawledUrls, err := getUncrawledPages(ctx, conn, amount)
 	if err != nil {
-		log.Fatal("Query failed:", err)
+		log.Fatal("Failed to get uncrawled pages:", err)
 	}
-	defer rows.Close()
+
+	oldUrls, err := getOldPages(ctx, conn, amount)
+	if err != nil {
+		log.Fatal("Failed to get old pages:", err)
+	}
+
+	seen := make(map[string]struct{}, len(uncrawledUrls)+len(oldUrls))
+	urls := make([]string, 0, len(uncrawledUrls)+len(oldUrls))
+
+	for _, url := range append(uncrawledUrls, oldUrls...) {
+		if _, ok := seen[url]; ok {
+			continue
+		}
+		seen[url] = struct{}{}
+		urls = append(urls, url)
+	}
 
 	count := 0
-	for rows.Next() {
-		var url string
-		var domain string
-		if err := rows.Scan(&url, &domain); err != nil {
-			log.Fatal("Scan failed:", err)
-		}
-
-		messageId, err := sqsClient.SendMessage(ctx, url, map[string]string{"domain": domain})
-		if err != nil {
-			log.Fatal("Failed to send message to SQS:", err)
-		}
-		fmt.Printf("Sent message to SQS with Message ID: %s\n", messageId)
+	for _, url := range urls {
+		//messageId, err := sqsClient.SendMessage(ctx, url)
+		//if err != nil {
+		//	log.Fatal("Failed to send message to SQS:", err)
+		//}
+		//fmt.Printf("Sent message to SQS with Message ID: %s\n", messageId)
 
 		count++
-		fmt.Printf("URL: %s, Domain: %s Count: %d\n", url, domain, count)
+		fmt.Printf("URL: %s Count: %d\n", url, count)
 	}
 
 	fmt.Printf("Total messages sent to SQS: %d\n", count)
-
-	if err := rows.Err(); err != nil {
-		log.Fatal("rows error:", err)
-	}
 
 	return Response{
 		Message: "Success",
 		Status:  200,
 	}, nil
+}
+
+func getUncrawledPages(ctx context.Context, conn *pgxpool.Pool, amount int) ([]string, error) {
+	rows, err := conn.Query(ctx, `
+		SELECT url
+		FROM pages
+		WHERE is_active = $1 AND s3_key = 'NOT_CRAWLED'
+		ORDER BY RANDOM()
+		LIMIT $2;`, true, amount)
+
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+	defer rows.Close()
+
+	var urls []string
+	for rows.Next() {
+		var url string
+		if err := rows.Scan(&url); err != nil {
+			return nil, fmt.Errorf("scan failed: %w", err)
+		}
+		urls = append(urls, url)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return urls, nil
+}
+
+func getOldPages(ctx context.Context, conn *pgxpool.Pool, amount int) ([]string, error) {
+	crawlIntervalDays := os.Getenv("CRAWL_INTERVAL_DAYS")
+	crawlIntervalDaysInt, err := strconv.Atoi(crawlIntervalDays)
+	if err != nil {
+		crawlIntervalDaysInt = 7
+	}
+	fetchIntervalHours := int(float64(crawlIntervalDaysInt*24) * 0.9)
+
+	rows, err := conn.Query(ctx, `
+		SELECT url
+		FROM pages
+		WHERE is_active = $1 AND s3_key != 'REDIRECT' AND last_crawled_at < NOW() - $2 * INTERVAL '1 hour'
+		ORDER BY RANDOM()
+		LIMIT $3;`, true, fetchIntervalHours, amount)
+
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+	defer rows.Close()
+
+	var urls []string
+	for rows.Next() {
+		var url string
+		if err := rows.Scan(&url); err != nil {
+			return nil, fmt.Errorf("scan failed: %w", err)
+		}
+		urlHash := getHashFromUrl(url)
+		urlMod := urlHash % uint64(crawlIntervalDaysInt)
+
+		now := time.Now().UTC()
+		dayNum := now.Unix() / 86400
+		dayMod := dayNum % int64(crawlIntervalDaysInt)
+
+		if urlMod == uint64(dayMod) {
+			urls = append(urls, url)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return urls, nil
+}
+
+func getHashFromUrl(url string) uint64 {
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(url))
+	return h.Sum64()
 }
 
 func main() {
