@@ -128,11 +128,11 @@ func HandleRequest(ctx context.Context) (Response, error) {
 
 	count := 0
 	for _, url := range urls {
-		//messageId, err := sqsClient.SendMessage(ctx, url)
-		//if err != nil {
-		//	log.Fatal("Failed to send message to SQS:", err)
-		//}
-		//fmt.Printf("Sent message to SQS with Message ID: %s\n", messageId)
+		messageId, err := sqsClient.SendMessage(ctx, url)
+		if err != nil {
+			log.Fatal("Failed to send message to SQS:", err)
+		}
+		fmt.Printf("Sent message to SQS with Message ID: %s\n", messageId)
 
 		count++
 		fmt.Printf("URL: %s Count: %d\n", url, count)
