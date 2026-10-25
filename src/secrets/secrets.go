@@ -14,7 +14,6 @@ import (
 
 type DatabaseSecrets struct {
 	Username string `json:"username"`
-	Password string `json:"password"`
 	DBName   string `json:"database_name"`
 }
 
@@ -60,11 +59,6 @@ func GetDatabaseCredentials(ctx context.Context) error {
 	err = os.Setenv("PG_USER", dbSecrets.Username)
 	if err != nil {
 		return fmt.Errorf("failed to set PG_USER environment variable: %w", err)
-	}
-
-	err = os.Setenv("PG_PASSWORD", dbSecrets.Password)
-	if err != nil {
-		return fmt.Errorf("failed to set PG_PASSWORD environment variable: %w", err)
 	}
 
 	err = os.Setenv("PG_DATABASE", dbSecrets.DBName)
